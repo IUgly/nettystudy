@@ -12,9 +12,13 @@ import io.netty.example.study.server.codec.OrderProtocolDecoder;
 import io.netty.example.study.server.codec.OrderProtocolEncoder;
 import io.netty.example.study.server.handler.MetricHandler;
 import io.netty.example.study.server.handler.OrderServerProcessHandler;
+import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
+import oracle.jvm.hotspot.jfr.GlobalTraceBuffer;
 
 import java.util.concurrent.ExecutionException;
 
@@ -56,13 +60,25 @@ public class Server {
 
         MetricHandler metricHandler = new MetricHandler();
 
+        //声明一个大小为10的线程池
+        UnorderedThreadPoolEventExecutor business = new UnorderedThreadPoolEventExecutor(
+                10, new DefaultThreadFactory("business"));
+        //使用NioNioEventLoopGroup处理时是单线程
+//        NioEventLoopGroup business = new NioEventLoopGroup(0
+//                , new DefaultThreadFactory("business"));
+
+        GlobalTrafficShapingHandler globalTrafficShapingHandler = new GlobalTrafficShapingHandler(new NioEventLoopGroup(),
+                100 * 1024 * 1024, 100 * 1024 * 1024);
+
         serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
             @Override
             protected void initChannel(NioSocketChannel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-
                 //debug时打印原始数据
                 pipeline.addLast(new LoggingHandler(LogLevel.DEBUG));
+
+                //流量整型控制
+                pipeline.addLast("TSHandler", globalTrafficShapingHandler);
 
                 //"frameDecoder"  : 完善handler名称
                 pipeline.addLast("frameDecoder",new OrderFrameDecoder());
@@ -76,7 +92,11 @@ public class Server {
                 //通过导入Log4j包，并配置日志级别以及控制Logging的位置打印想要的信息
                 pipeline.addLast(new LoggingHandler(LogLevel.INFO));
 
-                pipeline.addLast(new OrderServerProcessHandler());
+                //flush增强，减少了flush次数，牺牲一定延迟，提高吞吐量
+                pipeline.addLast("flushEnhance", new FlushConsolidationHandler(5, true));
+
+                //pipeline.addLast(new OrderServerProcessHandler());
+                pipeline.addLast(business, new OrderServerProcessHandler());
             }
         });
 

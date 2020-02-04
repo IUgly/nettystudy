@@ -1,10 +1,13 @@
 package io.netty.example.study.common.order;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import io.netty.example.study.common.Operation;
 import io.netty.example.study.common.OperationResult;
 import lombok.Data;
 import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.TimeUnit;
 
 @Data
 @Slf4j
@@ -20,6 +23,9 @@ public class OrderOperation extends Operation {
     @Override
     public OperationResult execute() {
         log.info("order`s executing startup with orderRequest:" + toString());
+
+        //模拟任务消耗较长时间的情况
+        Uninterruptibles.sleepUninterruptibly(3000, TimeUnit.SECONDS);
         log.info("order`s executing complete");
         OrderOperationResult orderResponse = new OrderOperationResult(tableId, dish, true);
         return orderResponse;

@@ -49,7 +49,7 @@ public class ClientV0 {
 
         RequestMessage requestMessage = new RequestMessage(IdUtil.nextId(), new OrderOperation(1001, "tudou"));
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 20; i++) {
             channelFuture.channel().writeAndFlush(requestMessage);
         }
 
