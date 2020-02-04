@@ -4,9 +4,10 @@ import io.netty.example.study.common.Operation;
 import io.netty.example.study.common.OperationResult;
 import lombok.Data;
 import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 @Data
-@Log
+@Slf4j
 public class OrderOperation extends Operation {
     private int tableId;
     private String dish;

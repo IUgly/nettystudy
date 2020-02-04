@@ -25,6 +25,7 @@ public class ClientV0 {
 
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.channel(NioSocketChannel.class);
+        //客户端连接服务器最大允许时间
         bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10 * 1000);
 
         bootstrap.group(new NioEventLoopGroup());
@@ -48,7 +49,9 @@ public class ClientV0 {
 
         RequestMessage requestMessage = new RequestMessage(IdUtil.nextId(), new OrderOperation(1001, "tudou"));
 
-        channelFuture.channel().writeAndFlush(requestMessage);
+        for (int i = 0; i < 10000; i++) {
+            channelFuture.channel().writeAndFlush(requestMessage);
+        }
 
         channelFuture.channel().closeFuture().sync();
 
