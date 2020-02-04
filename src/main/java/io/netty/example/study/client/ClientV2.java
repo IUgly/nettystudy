@@ -19,7 +19,10 @@ import io.netty.handler.logging.LoggingHandler;
 
 import java.util.concurrent.ExecutionException;
 
-public class   ClientV2 {
+/**
+ * @author kuangjunlin
+ */
+public class ClientV2 {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
 

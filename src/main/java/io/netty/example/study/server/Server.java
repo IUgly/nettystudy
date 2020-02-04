@@ -12,7 +12,11 @@ import io.netty.example.study.server.codec.OrderProtocolDecoder;
 import io.netty.example.study.server.codec.OrderProtocolEncoder;
 import io.netty.example.study.server.handler.MetricHandler;
 import io.netty.example.study.server.handler.OrderServerProcessHandler;
+import io.netty.example.study.server.handler.ServerIdleCheckHandler;
 import io.netty.handler.flush.FlushConsolidationHandler;
+import io.netty.handler.ipfilter.IpFilterRuleType;
+import io.netty.handler.ipfilter.IpSubnetFilterRule;
+import io.netty.handler.ipfilter.RuleBasedIpFilter;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
@@ -34,6 +38,9 @@ import java.util.concurrent.ExecutionException;
  *  · 若最终没获取到, 用默认: 128
  *  使用方式:
  *  javaChannel().bind(localAddress, config.getBacklog());
+ *
+ *  开启native
+ *  Nio替换为Nio
  */
 
 public class Server {
@@ -46,8 +53,10 @@ public class Server {
         serverBootstrap.handler(new LoggingHandler(LogLevel.INFO));
 
         //完善线程名称
-        NioEventLoopGroup boss = new NioEventLoopGroup(0, new DefaultThreadFactory("boss"));
-        NioEventLoopGroup worker = new NioEventLoopGroup(0, new DefaultThreadFactory("worker"));
+        NioEventLoopGroup boss = new NioEventLoopGroup
+                (0, new DefaultThreadFactory("boss"));
+        NioEventLoopGroup worker = new NioEventLoopGroup
+                (0, new DefaultThreadFactory("worker"));
 
         serverBootstrap.group(boss, worker);
 
@@ -70,6 +79,13 @@ public class Server {
         GlobalTrafficShapingHandler globalTrafficShapingHandler = new GlobalTrafficShapingHandler(new NioEventLoopGroup(),
                 100 * 1024 * 1024, 100 * 1024 * 1024);
 
+        //设置黑名单
+        //Todo
+        IpSubnetFilterRule ipSubnetFilterRule
+                = new IpSubnetFilterRule(
+                "127.0.0.1", 8, IpFilterRuleType.REJECT);
+        RuleBasedIpFilter ruleBasedIpFilter = new RuleBasedIpFilter(ipSubnetFilterRule);
+
         serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
             @Override
             protected void initChannel(NioSocketChannel ch) throws Exception {
@@ -77,8 +93,13 @@ public class Server {
                 //debug时打印原始数据
                 pipeline.addLast(new LoggingHandler(LogLevel.DEBUG));
 
+                pipeline.addLast("ipfilter", ruleBasedIpFilter);
+
                 //流量整型控制
                 pipeline.addLast("TSHandler", globalTrafficShapingHandler);
+
+                //空闲关闭
+                pipeline.addLast("idleCheck", new ServerIdleCheckHandler());
 
                 //"frameDecoder"  : 完善handler名称
                 pipeline.addLast("frameDecoder",new OrderFrameDecoder());

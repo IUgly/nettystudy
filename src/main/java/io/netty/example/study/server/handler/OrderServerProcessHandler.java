@@ -7,11 +7,13 @@ import io.netty.example.study.common.Operation;
 import io.netty.example.study.common.OperationResult;
 import io.netty.example.study.common.RequestMessage;
 import io.netty.example.study.common.ResponseMessage;
+import lombok.extern.slf4j.Slf4j;
 
 
 /**
  * @author kuangjunlin
  */
+@Slf4j
 public class OrderServerProcessHandler extends SimpleChannelInboundHandler<RequestMessage> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, RequestMessage requestMessage) throws Exception {
@@ -26,7 +28,12 @@ public class OrderServerProcessHandler extends SimpleChannelInboundHandler<Reque
         responseMessage.setMessageHeader(requestMessage.getMessageHeader());
         responseMessage.setMessageBody(operationResult);
 
-        ctx.writeAndFlush(responseMessage);
+        // 如果buf满了，丢掉数据，防止OOM
+        if (ctx.channel().isActive() && ctx.channel().isWritable()) {
+            ctx.writeAndFlush(responseMessage);
+        } else {
+            log.error("message dropped");
+        }
     }
 
 
